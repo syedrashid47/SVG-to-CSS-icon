@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG to CSS Mask Icon Generator</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+    }
+    textarea {
+        width: 100%;
+        height: 150px;
+        font-family: monospace;
+    }
+    input[type="text"] {
+        width: 200px;
+        padding: 5px;
+    }
+    button {
+        padding: 6px 12px;
+        margin-top: 10px;
+    }
+    pre {
+        background: #f4f4f4;
+        padding: 10px;
+        overflow-x: auto;
+    }
+</style>
+</head>
+<body>
+
+<h1>SVG to CSS Mask Icon Generator</h1>
+
+<label for="iconName">Icon Name:</label>
+<input type="text" id="iconName" placeholder="translate" />
+
+<h3>Paste your SVG here:</h3>
+<textarea id="svgInput" placeholder="Paste SVG here..."></textarea>
+
+<br>
+<button onclick="generateCSS()">Generate CSS</button>
+
+<h3>Generated CSS:</h3>
+<pre id="cssOutput"></pre>
+
+<script>
+// Encode SVG safely for CSS mask
+function encodeSVGForCSS(svg) {
+    // Remove width, height, class, fill attributes to prevent conflicts
+    svg = svg.replace(/\s*(width|height|class|fill)="[^"]*"/gi, '');
+    // Remove newlines and tabs
+    svg = svg.replace(/\r?\n|\t/g, ' ').trim();
+    // Encode only necessary characters
+    return svg
+        .replace(/</g, '%3C')
+        .replace(/>/g, '%3E')
+        .replace(/"/g, '%22')
+        .replace(/#/g, '%23')
+        .replace(/\s+/g, ' ');
+}
+
+function generateCSS() {
+    const name = document.getElementById('iconName').value.trim();
+    const svg = document.getElementById('svgInput').value.trim();
+
+    if (!name || !svg) {
+        alert("Please provide both icon name and SVG.");
+        return;
+    }
+
+    const encodedSVG = encodeSVGForCSS(svg);
+
+    const css = `
+.agl-icon-${name} {
+    display: inline-block;
+    width: 1em; /* scales with font-size */
+    height: 1em;
+    vertical-align: middle;
+    -webkit-mask: url('data:image/svg+xml,${encodedSVG}') no-repeat center;
+    mask: url('data:image/svg+xml,${encodedSVG}') no-repeat center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    background-color: currentColor; /* icon color follows text */
+}
+`;
+
+    document.getElementById('cssOutput').textContent = css;
+}
+</script>
+
+</body>
+</html>
