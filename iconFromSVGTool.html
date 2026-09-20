@@ -1,94 +1,707 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SVG to CSS Mask Icon Generator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SVG to CSS icon sheet</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
+  :root {
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --ink: #16202a;
+    --muted: #5d6a77;
+    --line: #d5dce3;
+    --accent: #3b3fd8;
+    --accent-ink: #ffffff;
+    --accent-soft: #e6e7fb;
+    --warn: #9a5b00;
+    --warn-soft: #fbefd5;
+    --bad: #b4232c;
+    --pv-bg: #ffffff;
+    --pv-ink: #16202a;
+    --pv-grid: #e3e8ee;
+    --code-bg: #111820;
+    --code-ink: #dbe4ee;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1218;
+      --panel: #151c24;
+      --ink: #e6ecf2;
+      --muted: #91a0af;
+      --line: #27323e;
+      --accent: #8b8fff;
+      --accent-ink: #0d1218;
+      --accent-soft: #232650;
+      --warn: #f0b95a;
+      --warn-soft: #3a2b0d;
+      --bad: #ff8088;
+      --pv-bg: #ffffff;
+      --pv-ink: #16202a;
+      --pv-grid: #e3e8ee;
+      --code-bg: #0a0f14;
     }
-    textarea {
-        width: 100%;
-        height: 150px;
-        font-family: monospace;
-    }
-    input[type="text"] {
-        width: 200px;
-        padding: 5px;
-    }
-    button {
-        padding: 6px 12px;
-        margin-top: 10px;
-    }
-    pre {
-        background: #f4f4f4;
-        padding: 10px;
-        overflow-x: auto;
-    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--sans);
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .page { max-width: 1240px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  header { margin-bottom: 22px; }
+  h1 { margin: 0 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .panel + .panel { margin-top: 18px; }
+  .layout > .panel + .panel { margin-top: 0; }
+
+  /* Drop zone */
+  .drop {
+    display: block;
+    border: 2px dashed var(--line);
+    border-radius: 8px;
+    padding: 22px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+  }
+  .drop:hover, body.dragging .drop { border-color: var(--accent); background: var(--accent-soft); }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .drop strong { display: block; font-size: 16px; }
+  .drop span { color: var(--muted); font-size: 13px; }
+
+  .field { margin-top: 18px; }
+  .field > label, .field > .lbl { display: block; font-weight: 600; margin-bottom: 4px; }
+  .help { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  .text, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+  }
+  .text.mono { font-family: var(--mono); }
+  .example { font-family: var(--mono); font-size: 13px; color: var(--accent); word-break: break-all; }
+  .check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .check input { margin-top: 4px; accent-color: var(--accent); }
+  .check b { display: block; font-weight: 600; }
+
+  /* Buttons */
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 7px 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.quiet { border-color: transparent; color: var(--muted); font-weight: 500; }
+  .btn.quiet:hover { color: var(--bad); border-color: transparent; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .bar h2 { margin: 0; font-size: 17px; }
+  .bar .grow { flex: 1; }
+  .bar .count { color: var(--muted); font-size: 13px; }
+  .switch { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .switch input { accent-color: var(--accent); }
+
+  /* Preview grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .empty {
+    grid-column: 1 / -1;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 34px 16px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .tile {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .tile.err { border-color: var(--bad); }
+  .sw {
+    height: 96px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    font-size: 40px;
+    color: var(--pv-ink);
+    background-color: var(--pv-bg);
+    /* keyline grid: 8px squares, heavier every 4 */
+    background-image:
+      linear-gradient(var(--pv-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--pv-grid) 1px, transparent 1px);
+    background-size: 10px 10px;
+    background-position: center;
+  }
+  .grid.dark { --pv-bg: #16202a; --pv-ink: #f2f5f8; --pv-grid: #223040; }
+  .sw .bang { font-size: 28px; color: var(--bad); font-weight: 700; }
+  .nm {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 3px 4px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .nm:hover { border-color: var(--line); }
+  .nm:focus { border-color: var(--accent); background: var(--bg); outline: none; }
+  .cls {
+    all: unset;
+    box-sizing: border-box;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: copy;
+    overflow-wrap: anywhere;
+  }
+  .cls:hover { background: var(--accent-soft); }
+  .cls:focus-visible { outline: 2px solid var(--accent); }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; color: var(--muted); padding: 0 4px 2px; }
+  .chip { padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .errmsg { color: var(--bad); font-size: 12px; padding: 0 4px 2px; }
+  .x {
+    position: absolute; top: 12px; right: 12px;
+    width: 24px; height: 24px; line-height: 20px; text-align: center;
+    border-radius: 50%; border: 1px solid var(--line);
+    background: var(--panel); color: var(--muted); cursor: pointer; padding: 0; font-size: 16px;
+    opacity: 0; transition: opacity .12s;
+  }
+  .tile:hover .x, .x:focus-visible { opacity: 1; }
+  .x:hover { color: var(--bad); border-color: var(--bad); }
+  @media (hover: none) { .x { opacity: 1; } }
+
+  /* Output */
+  .out-wrap { position: relative; }
+  textarea.code {
+    width: 100%;
+    height: 320px;
+    resize: vertical;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    font: 12.5px/1.55 var(--mono);
+    white-space: pre;
+    overflow: auto;
+    tab-size: 2;
+  }
+  .use { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+  .use code { font-family: var(--mono); color: var(--ink); background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translate(-50%, 20px);
+    background: var(--ink); color: var(--panel);
+    padding: 9px 16px; border-radius: 8px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s;
+    z-index: 10;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
 </style>
 </head>
 <body>
+<div class="page">
+  <header>
+    <h1>SVG to CSS icon sheet</h1>
+    <p>Drop in a batch of SVG files and get one stylesheet. Each file becomes a class you can put on any element. Visio, Figma and downloaded SVGs are cleaned up on the way in.</p>
+  </header>
 
-<h1>SVG to CSS Mask Icon Generator</h1>
+  <div class="layout">
+    <section class="panel" aria-label="Settings">
+      <label class="drop" id="drop">
+        <input type="file" id="file" multiple accept=".svg,image/svg+xml">
+        <strong>Drop SVG files here</strong>
+        <span>or click to choose files</span>
+      </label>
 
-<label for="iconName">Icon Name:</label>
-<input type="text" id="iconName" placeholder="translate" />
+      <div class="field">
+        <label for="prefix">Class prefix</label>
+        <input class="text mono" id="prefix" value="icon-" spellcheck="false" autocomplete="off">
+        <p class="help">The file name is added after this. <span class="example" id="example">.icon-name</span></p>
+      </div>
 
-<h3>Paste your SVG here:</h3>
-<textarea id="svgInput" placeholder="Paste SVG here..."></textarea>
+      <div class="field">
+        <label for="mode">Colours</label>
+        <select id="mode">
+          <option value="color">Keep the original colours</option>
+          <option value="mask">One colour, follows the text colour</option>
+        </select>
+        <p class="help" id="modeHelp"></p>
+      </div>
 
-<br>
-<button onclick="generateCSS()">Generate CSS</button>
+      <div class="field">
+        <label for="enc">Encoding</label>
+        <select id="enc">
+          <option value="url">URL-encoded (smaller, readable)</option>
+          <option value="b64">Base64</option>
+        </select>
+      </div>
 
-<h3>Generated CSS:</h3>
-<pre id="cssOutput"></pre>
+      <div class="field">
+        <label for="size">Default icon size</label>
+        <input class="text mono" id="size" value="1em" spellcheck="false" autocomplete="off">
+        <p class="help">Any CSS length, for example 1em, 24px or 1.5rem.</p>
+      </div>
+
+      <div class="field">
+        <label class="check">
+          <input type="checkbox" id="crop" checked>
+          <span><b>Crop to the artwork</b><span class="help" style="display:block;margin:2px 0 0">Visio often places a small shape on a full page. This trims the empty space so the icon fills its box.</span></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Icons">
+      <div class="bar">
+        <h2>Icons</h2>
+        <span class="count" id="count">none yet</span>
+        <span class="grow"></span>
+        <label class="switch"><input type="checkbox" id="dark"> Dark preview</label>
+        <button class="btn quiet" id="clear" disabled>Remove all</button>
+      </div>
+      <div class="grid" id="grid">
+        <div class="empty">No icons yet. Drop some SVG files on the left.</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Generated CSS">
+    <div class="bar">
+      <h2>icons.css</h2>
+      <span class="count" id="stats"></span>
+      <span class="grow"></span>
+      <button class="btn" id="copy" disabled>Copy CSS</button>
+      <button class="btn primary" id="download" disabled>Download icons.css</button>
+    </div>
+    <div class="out-wrap">
+      <textarea class="code" id="out" readonly spellcheck="false" aria-label="Generated CSS" placeholder="/* Your CSS will appear here */"></textarea>
+    </div>
+    <p class="use" id="use"></p>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<style id="generated"></style>
 
 <script>
-// Encode SVG safely for CSS mask
-function encodeSVGForCSS(svg) {
-    // Remove width, height, class, fill attributes to prevent conflicts
-    svg = svg.replace(/\s*(width|height|class|fill)="[^"]*"/gi, '');
-    // Remove newlines and tabs
-    svg = svg.replace(/\r?\n|\t/g, ' ').trim();
-    // Encode only necessary characters
-    return svg
-        .replace(/</g, '%3C')
-        .replace(/>/g, '%3E')
-        .replace(/"/g, '%22')
-        .replace(/#/g, '%23')
-        .replace(/\s+/g, ' ');
-}
+(() => {
+  'use strict';
 
-function generateCSS() {
-    const name = document.getElementById('iconName').value.trim();
-    const svg = document.getElementById('svgInput').value.trim();
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
 
-    if (!name || !svg) {
-        alert("Please provide both icon name and SVG.");
-        return;
+  const els = {
+    file: $('file'), drop: $('drop'), prefix: $('prefix'), example: $('example'),
+    mode: $('mode'), modeHelp: $('modeHelp'), enc: $('enc'), size: $('size'), crop: $('crop'),
+    grid: $('grid'), count: $('count'), dark: $('dark'), clear: $('clear'),
+    out: $('out'), stats: $('stats'), copy: $('copy'), download: $('download'),
+    use: $('use'), toast: $('toast'), gen: $('generated')
+  };
+
+  const items = [];   // { id, file, name, raw, svg, err, notes, cls }
+  let uid = 0;
+
+  /* ---------- helpers ---------- */
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const round = (n) => +Number(n).toFixed(3);
+
+  function slug(s) {
+    return String(s)
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\.svg$/i, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function cleanPrefix(p) { return p.trim().replace(/[^A-Za-z0-9_-]/g, ''); }
+
+  function cleanSize(s) {
+    s = s.trim();
+    return /^[0-9a-z.%()\s+*\/-]+$/i.test(s) && s ? s : '1em';
+  }
+
+  function toPx(v) {
+    const m = /^\s*([\d.]+(?:e[-+]?\d+)?)\s*(px|pt|pc|in|cm|mm)?\s*$/i.exec(v || '');
+    if (!m) return null;
+    const k = { px: 1, pt: 96 / 72, pc: 16, in: 96, cm: 96 / 2.54, mm: 96 / 25.4 }[(m[2] || 'px').toLowerCase()];
+    const n = parseFloat(m[1]) * k;
+    return n > 0 ? n : null;
+  }
+
+  function validViewBox(vb) {
+    if (!vb) return false;
+    const p = vb.trim().split(/[\s,]+/).map(Number);
+    return p.length === 4 && p.every(Number.isFinite) && p[2] > 0 && p[3] > 0;
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.remove('show'), 1600);
+  }
+
+  async function copyText(text, msg) {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch {}
+      ta.remove();
+    }
+    toast(msg || 'Copied');
+  }
+
+  /* ---------- SVG cleaning ---------- */
+
+  function parseXml(text) {
+    const d = new DOMParser().parseFromString(text, 'image/svg+xml');
+    return d.getElementsByTagName('parsererror').length ? null : d;
+  }
+
+  // Measure the real artwork bounds (in the svg's own user units).
+  // Rendered inside a shadow root so the file's <style> rules can't leak into this page.
+  function measure(svgStr) {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:absolute;left:-99999px;top:0;width:1000px;height:1000px;visibility:hidden;pointer-events:none';
+    const sr = host.attachShadow({ mode: 'open' });
+    sr.innerHTML = svgStr;
+    document.body.appendChild(host);
+    try {
+      const svg = sr.querySelector('svg');
+      const b = svg.getBBox();
+      let maxStroke = 0;
+      sr.querySelectorAll('*').forEach((el) => {
+        const cs = getComputedStyle(el);
+        if (cs.stroke && cs.stroke !== 'none') {
+          const w = parseFloat(cs.strokeWidth) || 0;
+          if (w > maxStroke) maxStroke = w;
+        }
+      });
+      return { x: b.x, y: b.y, width: b.width, height: b.height, maxStroke };
+    } catch { return null; }
+    finally { host.remove(); }
+  }
+
+  function processSvg(raw, { crop }) {
+    const notes = [];
+    let text = raw.replace(/^\uFEFF/, '').trim();
+    let doc = parseXml(text);
+    if (!doc) doc = parseXml(text.replace(/&nbsp;/g, '&#160;'));
+    if (!doc) throw new Error('This file is not valid SVG (XML could not be read).');
+    const root = doc.documentElement;
+    if (root.localName !== 'svg') throw new Error('The root element is not <svg>.');
+
+    if (root.querySelector('image'))
+      notes.push({ t: 'raster', warn: true, msg: 'Contains an embedded bitmap, so the CSS will be large.' });
+    if (root.querySelector('text'))
+      notes.push({ t: 'live text', warn: true, msg: 'Contains live text. Fonts do not load inside CSS images, so convert text to outlines in the source.' });
+    if (root.querySelector('foreignObject'))
+      notes.push({ t: 'foreignObject', warn: true, msg: 'foreignObject is not supported in CSS images.' });
+
+    // Drop metadata, tooltips, scripts and anything from a non-SVG namespace (Visio v:, Inkscape, etc.)
+    Array.from(root.querySelectorAll('*')).forEach((el) => {
+      if (el.namespaceURI !== SVG_NS && !el.closest('foreignObject')) { el.remove(); return; }
+      if (['metadata', 'title', 'desc', 'script'].includes(el.localName)) el.remove();
+    });
+
+    // Drop foreign-namespace attributes and namespace declarations (keep xlink / xml)
+    [root, ...root.querySelectorAll('*')].forEach((el) => {
+      Array.from(el.attributes).forEach((a) => {
+        const p = a.prefix;
+        if ((p === 'xmlns' && a.localName !== 'xlink') ||
+            (p && !['xlink', 'xml', 'xmlns'].includes(p)) ||
+            /^on/i.test(a.name)) el.removeAttributeNode(a);
+      });
+    });
+    ['x', 'y', 'version', 'baseProfile'].forEach((a) => root.removeAttribute(a));
+
+    // Make sure the icon has a viewBox so it scales
+    let hasVB = validViewBox(root.getAttribute('viewBox'));
+    const w = toPx(root.getAttribute('width'));
+    const h = toPx(root.getAttribute('height'));
+    if (!hasVB && w && h) {
+      root.setAttribute('viewBox', `0 0 ${round(w)} ${round(h)}`);
+      hasVB = true;
+      notes.push({ t: 'viewBox added', msg: 'No viewBox found, built one from width and height.' });
+    }
+    root.removeAttribute('width');
+    root.removeAttribute('height');
+
+    if (crop || !hasVB) {
+      const bb = measure(new XMLSerializer().serializeToString(root));
+      if (bb && (bb.width > 0 || bb.height > 0)) {
+        const big = Math.max(bb.width, bb.height);
+        const pad = Math.max(big * 0.02, Math.min(bb.maxStroke / 2, big * 0.25));
+        const vb = [bb.x - pad, bb.y - pad, bb.width + pad * 2, bb.height + pad * 2].map(round);
+        root.setAttribute('viewBox', vb.join(' '));
+        notes.push({ t: 'cropped', msg: 'Cropped to the artwork.' });
+      } else if (!hasVB) {
+        throw new Error('No viewBox and the artwork could not be measured.');
+      }
     }
 
-    const encodedSVG = encodeSVGForCSS(svg);
+    const svg = new XMLSerializer().serializeToString(root)
+      .replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ');
+    return { svg, notes };
+  }
 
-    const css = `
-.agl-icon-${name} {
-    display: inline-block;
-    width: 1em; /* scales with font-size */
-    height: 1em;
-    vertical-align: middle;
-    -webkit-mask: url('data:image/svg+xml,${encodedSVG}') no-repeat center;
-    mask: url('data:image/svg+xml,${encodedSVG}') no-repeat center;
-    -webkit-mask-size: contain;
-    mask-size: contain;
-    background-color: currentColor; /* icon color follows text */
-}
-`;
+  function toUrl(svg, encoding) {
+    if (encoding === 'b64') {
+      return `url("data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}")`;
+    }
+    let s = svg;
+    const swap = !s.includes("'");            // if no apostrophes, use them instead of double quotes
+    if (swap) s = s.replace(/"/g, "'");
+    s = encodeURIComponent(s)
+      .replace(/%20/g, ' ').replace(/%3D/g, '=').replace(/%3A/g, ':')
+      .replace(/%2F/g, '/').replace(/%2C/g, ',').replace(/%3B/g, ';');
+    if (!swap) s = s.replace(/'/g, '%27');
+    return `url("data:image/svg+xml,${s}")`;
+  }
 
-    document.getElementById('cssOutput').textContent = css;
-}
+  /* ---------- class names + CSS ---------- */
+
+  function computeClasses() {
+    const prefix = cleanPrefix(els.prefix.value);
+    const used = new Set();
+    items.forEach((it) => {
+      if (!it.svg) { it.cls = null; return; }
+      let cls = prefix + (slug(it.name) || 'icon');
+      if (/^-?\d/.test(cls)) cls = '_' + cls;
+      let c = cls, i = 2;
+      while (used.has(c)) c = `${cls}-${i++}`;
+      used.add(c);
+      it.cls = c;
+    });
+  }
+
+  function buildCss() {
+    const ok = items.filter((i) => i.svg);
+    if (!ok.length) return '';
+    const size = cleanSize(els.size.value);
+    const mask = els.mode.value === 'mask';
+    const enc = els.enc.value;
+    const sel = ok.map((i) => '.' + i.cls).join(',\n');
+
+    let css = `/* Icon sheet: ${ok.length} icon${ok.length === 1 ? '' : 's'}. Use as <i class="${ok[0].cls}"></i> */\n`;
+    css += `${sel} {\n  display: inline-block;\n  width: ${size};\n  height: ${size};\n  flex: none;\n  vertical-align: -0.125em;\n`;
+    if (mask) {
+      css += `  background-color: currentColor;\n` +
+             `  -webkit-mask-image: var(--icon);\n  mask-image: var(--icon);\n` +
+             `  -webkit-mask-repeat: no-repeat;\n  mask-repeat: no-repeat;\n` +
+             `  -webkit-mask-position: center;\n  mask-position: center;\n` +
+             `  -webkit-mask-size: contain;\n  mask-size: contain;\n`;
+    } else {
+      css += `  background-repeat: no-repeat;\n  background-position: center;\n  background-size: contain;\n`;
+    }
+    css += `}\n\n`;
+    css += ok.map((i) => `.${i.cls} { ${mask ? '--icon' : 'background-image'}: ${toUrl(i.svg, enc)}; }`).join('\n') + '\n';
+    return css;
+  }
+
+  /* ---------- rendering ---------- */
+
+  function renderTiles() {
+    els.grid.innerHTML = '';
+    if (!items.length) {
+      els.grid.innerHTML = '<div class="empty">No icons yet. Drop some SVG files on the left.</div>';
+      return;
+    }
+    items.forEach((it) => {
+      const t = document.createElement('article');
+      t.className = 'tile' + (it.err ? ' err' : '');
+      t.dataset.id = it.id;
+      const chips = (it.notes || []).map((n) =>
+        `<span class="chip${n.warn ? ' warn' : ''}" title="${esc(n.msg)}">${esc(n.t)}</span>`).join('');
+      t.innerHTML =
+        `<button class="x" title="Remove ${esc(it.file)}" aria-label="Remove ${esc(it.file)}">&times;</button>` +
+        `<div class="sw">${it.err ? '<span class="bang">!</span>' : '<span class="ico"></span>'}</div>` +
+        `<input class="nm" value="${esc(it.name)}" spellcheck="false" aria-label="Icon name for ${esc(it.file)}" title="Rename (used as the last part of the class)">` +
+        (it.err
+          ? `<div class="errmsg">${esc(it.err)}</div>`
+          : `<button class="cls" title="Click to copy the class name"></button>` +
+            `<div class="meta"><span>${(it.svg.length / 1024).toFixed(1)} KB</span>${chips}</div>`);
+      els.grid.appendChild(t);
+    });
+  }
+
+  function refresh() {
+    computeClasses();
+    const css = buildCss();
+    els.gen.textContent = css;
+    els.out.value = css;
+
+    items.forEach((it) => {
+      const tile = els.grid.querySelector(`.tile[data-id="${it.id}"]`);
+      if (!tile || !it.cls) return;
+      tile.querySelector('.ico').className = 'ico ' + it.cls;
+      tile.querySelector('.cls').textContent = it.cls;
+    });
+
+    const ok = items.filter((i) => i.svg);
+    const bad = items.length - ok.length;
+    els.count.textContent = items.length
+      ? `${ok.length} icon${ok.length === 1 ? '' : 's'}${bad ? `, ${bad} failed` : ''}`
+      : 'none yet';
+    els.stats.textContent = css ? `${(new Blob([css]).size / 1024).toFixed(1)} KB` : '';
+    els.copy.disabled = els.download.disabled = !css;
+    els.clear.disabled = !items.length;
+
+    const first = ok[0] ? ok[0].cls : cleanPrefix(els.prefix.value) + 'name';
+    els.example.textContent = '.' + first;
+    els.use.innerHTML = ok.length
+      ? `Use it like <code>&lt;i class="${esc(first)}"&gt;&lt;/i&gt;</code>. Change the size with <code>font-size</code> or <code>width</code> and <code>height</code>.`
+      : '';
+    els.modeHelp.textContent = els.mode.value === 'mask'
+      ? 'Only the shape is used. The icon takes the current text colour, so it works with hover and dark mode.'
+      : 'Icons show exactly as drawn. The colours cannot be changed from CSS.';
+  }
+
+  function processItem(it) {
+    try {
+      const r = processSvg(it.raw, { crop: els.crop.checked });
+      it.svg = r.svg; it.notes = r.notes; it.err = null;
+    } catch (e) {
+      it.svg = null; it.notes = []; it.err = e.message || 'Could not read this file.';
+    }
+  }
+
+  async function addFiles(list) {
+    const files = Array.from(list).filter((f) => /\.svg$/i.test(f.name) || f.type === 'image/svg+xml');
+    if (!files.length) { toast('Only .svg files can be added'); return; }
+    for (const f of files) {
+      const raw = await f.text();
+      let it = items.find((i) => i.file === f.name);
+      if (!it) {
+        it = { id: ++uid, file: f.name, name: f.name.replace(/\.svg$/i, '') };
+        items.push(it);
+      }
+      it.raw = raw;
+      processItem(it);
+    }
+    items.sort((a, b) => a.file.localeCompare(b.file, undefined, { numeric: true, sensitivity: 'base' }));
+    renderTiles();
+    refresh();
+  }
+
+  /* ---------- events ---------- */
+
+  els.file.addEventListener('change', () => { addFiles(els.file.files); els.file.value = ''; });
+
+  let dragDepth = 0;
+  window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+  window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => {
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+    if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  ['input', 'change'].forEach((ev) => {
+    els.prefix.addEventListener(ev, refresh);
+    els.size.addEventListener(ev, refresh);
+    els.mode.addEventListener(ev, refresh);
+    els.enc.addEventListener(ev, refresh);
+  });
+
+  els.crop.addEventListener('change', () => {
+    items.forEach(processItem);
+    renderTiles();
+    refresh();
+  });
+
+  els.dark.addEventListener('change', () => els.grid.classList.toggle('dark', els.dark.checked));
+
+  els.grid.addEventListener('click', (e) => {
+    const tile = e.target.closest('.tile');
+    if (!tile) return;
+    const it = items.find((i) => i.id === +tile.dataset.id);
+    if (e.target.closest('.x')) {
+      items.splice(items.indexOf(it), 1);
+      renderTiles(); refresh();
+    } else if (e.target.closest('.cls') && it.cls) {
+      copyText(it.cls, `Copied ${it.cls}`);
+    }
+  });
+
+  els.grid.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('nm')) return;
+    const it = items.find((i) => i.id === +e.target.closest('.tile').dataset.id);
+    it.name = e.target.value;
+    refresh();
+  });
+
+  els.clear.addEventListener('click', () => { items.length = 0; renderTiles(); refresh(); });
+  els.copy.addEventListener('click', () => copyText(els.out.value, 'CSS copied'));
+  els.download.addEventListener('click', () => {
+    const blob = new Blob([els.out.value], { type: 'text/css' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'icons.css';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  refresh();
+})();
 </script>
-
 </body>
 </html>
